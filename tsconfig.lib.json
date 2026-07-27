@@ -1,0 +1,25 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
+    "emitDeclarationOnly": false,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@syrokomskyi/pipeline-core": ["../pipeline-core/src/index.ts"],
+      "@syrokomskyi/pipeline-ai": ["../pipeline-ai/src/index.ts"],
+      "@syrokomskyi/pipeline-ai/openai": ["../pipeline-ai/src/lib/openai.ts"]
+    },
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../pipeline-core/tsconfig.lib.json"
+    },
+    {
+      "path": "../pipeline-ai/tsconfig.lib.json"
+    }
+  ]
+}
