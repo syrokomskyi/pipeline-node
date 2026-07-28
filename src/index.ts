@@ -18,28 +18,13 @@ export * from "./lib/run-node-pipeline-engine.js";
 export * from "./lib/env.js";
 export * from "./lib/frontmatter.js";
 export * from "./lib/pipeline-declarations.js";
-export { getRequiredEnv } from "./lib/env.js";
 export * from "./lib/input-validation.js";
 export * from "./lib/json-output.js";
 export * from "./lib/node-pipeline-types.js";
 export * from "./lib/prompt-files.js";
-export {
-  appendOutputLanguageInstruction,
-  assertPromptTextReady,
-  createPromptFileReader,
-  readPromptFileFromPath,
-} from "./lib/prompt-files.js";
-export type { PromptFileReader, PromptReadOptions } from "./lib/prompt-files.js";
 export * from "./lib/template-files.js";
 export * from "./lib/llm-artifacts.js";
 export * from "./lib/cli.js";
 export { createWebhookEventBridge } from "./lib/webhook-event-bridge.js";
 export * from "./lib/app-paths.js";
 export * from "./lib/fetch-helpers.js";
-export { createHandlebarsTemplateRenderer } from "./lib/template-files.js";
-export type {
-  CreateHandlebarsTemplateRendererOptions,
-  HandlebarsTemplateRenderer,
-  TemplateVars,
-  WriteTemplateFileOptions,
-} from "./lib/template-files.js";
