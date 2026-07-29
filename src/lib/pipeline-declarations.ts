@@ -14,6 +14,7 @@
 import path from "node:path";
 import type {
   PipelinePhaseGuideSeed,
+  PipelineStepAiModelUsage,
   PipelineStepDecisionType,
   PipelineStepGuideSeed,
 } from "@syrokomskyi/pipeline-core";
@@ -58,6 +59,7 @@ export type PipelineStepDeclaration = {
   definitionOfDone?: string[];
   decisionType?: PipelineStepDecisionType;
   notes?: string[];
+  aiModelUsage?: PipelineStepAiModelUsage[];
   config: Record<string, unknown>;
 };
 
@@ -70,6 +72,37 @@ export type CreatePipelineDeclarationLoadersOptions<TFeature extends string = st
   defaultLanguage: string;
   configMode?: ConfigMode;
   memberFeatures?: readonly TFeature[];
+};
+
+const readAiModelUsage = (
+  value: unknown,
+  label: string,
+): PipelineStepAiModelUsage[] | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array of objects`);
+  }
+
+  const entries = value.map((entry, index) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`${label}[${index}] must be an object`);
+    }
+
+    const record = entry as Record<string, unknown>;
+    return {
+      modelSource: expectFrontmatterString(record.modelSource, `${label}[${index}].modelSource`),
+      maxTokens:
+        record.maxTokens !== undefined
+          ? readFrontmatterFiniteNumber(record.maxTokens, `${label}[${index}].maxTokens`)
+          : undefined,
+      purpose: expectFrontmatterString(record.purpose, `${label}[${index}].purpose`),
+    };
+  });
+
+  return entries.length > 0 ? entries : undefined;
 };
 
 const readDecisionType = (value: unknown, label: string): PipelineStepDecisionType | undefined => {
@@ -277,6 +310,10 @@ export const createPipelineDeclarationLoaders = <TFeature extends string = strin
         `gogol ${loadOptions.id}.decisionType`,
       ),
       notes: readOptionalFrontmatterStringArray(parsed.data.notes, `gogol ${loadOptions.id}.notes`),
+      aiModelUsage: readAiModelUsage(
+        parsed.data.aiModelUsage,
+        `gogol ${loadOptions.id}.aiModelUsage`,
+      ),
       config: readDeclarationConfig({
         data: parsed.data,
         configMode,
@@ -290,6 +327,7 @@ export const createPipelineDeclarationLoaders = <TFeature extends string = strin
           "definitionOfDone",
           "decisionType",
           "notes",
+          "aiModelUsage",
           "factory",
         ],
       }),
@@ -376,6 +414,7 @@ export const toPipelineStepGuideSeed = (
     definitionOfDone: declaration.definitionOfDone,
     decisionType: declaration.decisionType,
     notes: declaration.notes,
+    aiModelUsage: declaration.aiModelUsage,
   };
 };
 
