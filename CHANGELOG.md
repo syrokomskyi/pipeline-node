@@ -1,6 +1,22 @@
 # Changelog
 
 All notable changes to the `pipeline-node` project are documented here.
+## 2026-07-30 .. 2026-08-05
+
+### Added
+- Generate and add CHANGELOG.md files to all packages and apps for improved version tracking and transparency.
+- Add changelog links to all README.md files to provide easier navigation to release history.
+- Add AGENTS.md files to all major packages and apps for agent documentation.
+
+### Changed
+- Migrate all uses of @webgogol/forge to @warpgogol/forge and implement RFC-0070 renaming @wgogol/changelog-live to @warpgogol/changelog-live for consistent package naming.
+
+### Fixed
+- Downgrade TypeScript from 7.0.2 to 6.0.3 to restore compatibility with typescript-eslint.
+
+### Documentation
+- Update all relevant documentation and skills to reference new package namespaces and document the addition of AGENTS.md and changelog links across the codebase.
+
 ## 2026-07-23 .. 2026-07-29
 
 ### Added
