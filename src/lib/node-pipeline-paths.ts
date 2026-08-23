@@ -19,6 +19,7 @@ export const createNodePipelinePaths = <TContext extends PipelineStepContext>(op
   stepArtifactsById: Map<string, PipelineArtifacts<TContext>>;
   stepNumbers: Map<string, number>;
 }) => {
+  const outputOverrides = new Map<string, string>();
   const getStepNumber = (stepId: string): number => {
     const number = options.stepNumbers.get(stepId);
     if (!number) {
@@ -27,9 +28,12 @@ export const createNodePipelinePaths = <TContext extends PipelineStepContext>(op
     return number;
   };
 
-  const getStepOutputDir = (stepId: string): string => {
+  const getCanonicalStepOutputDir = (stepId: string): string => {
     return path.join(options.outputDir, `${getStepNumber(stepId)}-${stepId}`);
   };
+
+  const getStepOutputDir = (stepId: string): string =>
+    outputOverrides.get(stepId) ?? getCanonicalStepOutputDir(stepId);
 
   const getOutputPath = (stepId: string, baseFileName: string): string => {
     return path.join(getStepOutputDir(stepId), baseFileName);
@@ -51,8 +55,15 @@ export const createNodePipelinePaths = <TContext extends PipelineStepContext>(op
 
   return {
     getStepNumber,
+    getCanonicalStepOutputDir,
     getStepOutputDir,
     getOutputPath,
     getStepArtifactPath,
+    setStepOutputOverride: (stepId: string, outputDir: string): void => {
+      outputOverrides.set(stepId, outputDir);
+    },
+    clearStepOutputOverride: (stepId: string): void => {
+      outputOverrides.delete(stepId);
+    },
   };
 };

@@ -18,6 +18,7 @@
 
 import fs from "node:fs/promises";
 import matter from "gray-matter";
+import { randomUUID } from "node:crypto";
 
 import {
   assertArtifactValid,
@@ -67,6 +68,7 @@ export const createNodePipelineContext = <
     ensureOutputDir,
     writeTextFile,
   });
+  const outputTransactions = new Map<string, string>();
 
   const resolveFingerprint = async <TStepContext extends import("@syrokomskyi/pipeline-core").PipelineStepContext<TState>>(
     stepId: string,
@@ -219,6 +221,39 @@ export const createNodePipelineContext = <
       });
     },
     resolveStepFingerprint: async ({ stepId, fingerprint }) => resolveFingerprint(stepId, fingerprint),
+    beginStepOutputTransaction: async (stepId: string) => {
+      if (outputTransactions.has(stepId)) throw new Error(`Step output transaction already active: ${stepId}`);
+      const canonical = paths.getCanonicalStepOutputDir(stepId);
+      const staging = `${canonical}.staging-${randomUUID()}`;
+      await fs.mkdir(staging, { recursive: true });
+      outputTransactions.set(stepId, staging);
+      paths.setStepOutputOverride(stepId, staging);
+    },
+    commitStepOutputTransaction: async (stepId: string) => {
+      const staging = outputTransactions.get(stepId);
+      if (!staging) throw new Error(`No step output transaction active: ${stepId}`);
+      const canonical = paths.getCanonicalStepOutputDir(stepId);
+      const previous = `${canonical}.previous`;
+      await fs.rm(previous, { recursive: true, force: true });
+      const canonicalExists = await fileExists(canonical);
+      if (canonicalExists) await fs.rename(canonical, previous);
+      try {
+        await fs.rename(staging, canonical);
+      } catch (error) {
+        if (canonicalExists) await fs.rename(previous, canonical);
+        throw error;
+      }
+      paths.clearStepOutputOverride(stepId);
+      outputTransactions.delete(stepId);
+    },
+    abortStepOutputTransaction: async (stepId: string) => {
+      const staging = outputTransactions.get(stepId);
+      if (!staging) return;
+      paths.clearStepOutputOverride(stepId);
+      outputTransactions.delete(stepId);
+      const diagnostic = `${paths.getCanonicalStepOutputDir(stepId)}.incomplete-${randomUUID()}`;
+      await fs.rename(staging, diagnostic).catch(() => undefined);
+    },
     readStepArtifactText: async (stepId: string, artifactId: string) => {
       return readArtifactText({
         ctx,
@@ -249,7 +284,7 @@ export const createNodePipelineContext = <
     writeAiUsage: aiLogger.writeAiUsage,
   } satisfies NodePipelineContext<TState, TServices>;
 
-  const ctx = baseContext as NodePipelineContext<TState, TServices> & TExtra;
+  const ctx = baseContext as unknown as NodePipelineContext<TState, TServices> & TExtra;
   const extension = options.extendContext?.(baseContext) ?? ({} as TExtra);
   Object.defineProperties(ctx, Object.getOwnPropertyDescriptors(extension));
 

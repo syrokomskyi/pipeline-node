@@ -68,3 +68,26 @@ test("external completion accepts a receipt bound to the operation fingerprint",
   await ctx.recordStepCompletion?.({ stepId: "build", artifacts: ["result"], fingerprint });
   await expect(ctx.isStepReusable?.({ stepId: "build", artifacts: ["result"], fingerprint })).resolves.toBe(true);
 });
+
+test("a step output transaction atomically promotes validated staging bytes", async () => {
+  const { ctx } = await createHarness();
+  const canonical = ctx.getStepArtifactPath("build", "result");
+  await ctx.writeTextFile(canonical, "old");
+  await ctx.beginStepOutputTransaction?.("build");
+  const staged = ctx.getStepArtifactPath("build", "result");
+  expect(staged).not.toBe(canonical);
+  await ctx.writeTextFile(staged, "new");
+  await expect(fs.readFile(canonical, "utf8")).resolves.toBe("old\n");
+  await ctx.commitStepOutputTransaction?.("build");
+  await expect(fs.readFile(ctx.getStepArtifactPath("build", "result"), "utf8")).resolves.toBe("new\n");
+});
+
+test("an interrupted transaction preserves canonical output and isolates partial bytes", async () => {
+  const { ctx } = await createHarness();
+  const canonical = ctx.getStepArtifactPath("build", "result");
+  await ctx.writeTextFile(canonical, "old");
+  await ctx.beginStepOutputTransaction?.("build");
+  await ctx.writeTextFile(ctx.getStepArtifactPath("build", "result"), "partial");
+  await ctx.abortStepOutputTransaction?.("build");
+  await expect(fs.readFile(ctx.getStepArtifactPath("build", "result"), "utf8")).resolves.toBe("old\n");
+});
