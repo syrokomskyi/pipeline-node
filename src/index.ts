@@ -13,6 +13,7 @@
 export * from "./lib/gogol-base.js";
 export * from "./lib/artifact-io.js";
 export * from "./lib/artifact-fingerprint.js";
+export * from "./lib/artifact-manifest.js";
 export * from "./lib/create-node-pipeline-context.js";
 export * from "./lib/pipeline-documentation.js";
 export * from "./lib/run-node-pipeline-engine.js";
