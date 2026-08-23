@@ -26,7 +26,7 @@ export type ArtifactManifest = {
   outputs: Array<{ artifactId: string; sha256: string; bytes: number }>;
 };
 
-const assertSha256 = (value: unknown, field: string): asserts value is string => {
+const assertSha256: (value: unknown, field: string) => asserts value is string = (value, field) => {
   if (typeof value !== "string" || !/^[a-f0-9]{64}$/.test(value)) {
     throw new Error(`Invalid artifact manifest ${field}`);
   }
@@ -68,6 +68,6 @@ export const writeArtifactManifest = async (
   const destination = path.join(stepOutputDirectory, artifactManifestFileName);
   const temporaryPath = `${destination}.${randomUUID()}.tmp`;
   await fs.mkdir(stepOutputDirectory, { recursive: true });
-  await fs.writeFile(temporaryPath, matter.stringify("", manifest, { lineWidth: 80 }), "utf8");
+  await fs.writeFile(temporaryPath, matter.stringify("", manifest), "utf8");
   await fs.rename(temporaryPath, destination);
 };

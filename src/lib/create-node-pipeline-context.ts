@@ -67,13 +67,15 @@ export const createNodePipelineContext = <
     writeTextFile,
   });
 
-  const fingerprintFor = async (
+  const fingerprintFor = async <TStepContext extends import("@syrokomskyi/pipeline-core").PipelineStepContext<TState>>(
     stepId: string,
-    fingerprint: import("@syrokomskyi/pipeline-core").PipelineFingerprintContract<
-      import("@syrokomskyi/pipeline-core").PipelineStepContext<TState>
-    >,
+    fingerprint: import("@syrokomskyi/pipeline-core").PipelineFingerprintContract<TStepContext>,
   ): Promise<string> => {
-    const inputs = [...(await fingerprint.implementationInputs(ctx)), ...(await fingerprint.operationInputs(ctx))];
+    const fingerprintContext = ctx as unknown as TStepContext;
+    const inputs = [
+      ...(await fingerprint.implementationInputs(fingerprintContext)),
+      ...(await fingerprint.operationInputs(fingerprintContext)),
+    ];
     const parts = await Promise.all(inputs.map(async (input) => {
       if (input.kind === "file") return { id: input.id, kind: input.kind, ...await digestFile(input.path) };
       if (input.kind === "directory") return { id: input.id, kind: input.kind, ...await digestDirectory(input.path) };
