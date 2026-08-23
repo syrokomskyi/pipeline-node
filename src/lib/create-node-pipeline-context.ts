@@ -17,6 +17,7 @@
 */
 
 import fs from "node:fs/promises";
+import matter from "gray-matter";
 
 import {
   assertArtifactValid,
@@ -67,16 +68,16 @@ export const createNodePipelineContext = <
     writeTextFile,
   });
 
-  const fingerprintFor = async <TStepContext extends import("@syrokomskyi/pipeline-core").PipelineStepContext<TState>>(
+  const resolveFingerprint = async <TStepContext extends import("@syrokomskyi/pipeline-core").PipelineStepContext<TState>>(
     stepId: string,
     fingerprint: import("@syrokomskyi/pipeline-core").PipelineFingerprintContract<TStepContext>,
-  ): Promise<string> => {
+  ): Promise<import("@syrokomskyi/pipeline-core").PipelineFingerprintResolution> => {
     const fingerprintContext = ctx as unknown as TStepContext;
-    const inputs = [
-      ...(await fingerprint.implementationInputs(fingerprintContext)),
-      ...(await fingerprint.operationInputs(fingerprintContext)),
-    ];
-    const parts = await Promise.all(inputs.map(async (input) => {
+    const implementationInputs = await fingerprint.implementationInputs(fingerprintContext);
+    const operationInputs = await fingerprint.operationInputs(fingerprintContext);
+    if (implementationInputs.length === 0) throw new Error(`Step ${stepId} has no declared implementation inputs`);
+    if (operationInputs.length === 0) throw new Error(`Step ${stepId} has no declared operation inputs`);
+    const resolveInputs = async (inputs: readonly import("@syrokomskyi/pipeline-core").PipelineFingerprintInput[]) => Promise.all(inputs.map(async (input) => {
       if (input.kind === "file") return { id: input.id, kind: input.kind, ...await digestFile(input.path) };
       if (input.kind === "directory") return { id: input.id, kind: input.kind, ...await digestDirectory(input.path) };
       if (input.kind === "upstream_artifact") {
@@ -87,7 +88,26 @@ export const createNodePipelineContext = <
       }
       return { id: input.id, kind: input.kind, ...digestValue(input.kind === "value" ? input.value : input.version) };
     }));
-    return digestValue({ stepId, parts: parts.sort((left, right) => left.id.localeCompare(right.id)) }).sha256;
+    const implementationParts = await resolveInputs(implementationInputs);
+    const operationParts = await resolveInputs(operationInputs);
+    const byId = [...implementationParts, ...operationParts].map((part) => part.id);
+    if (new Set(byId).size !== byId.length) throw new Error(`Step ${stepId} has duplicate fingerprint input ids`);
+    const upstream = operationInputs.flatMap((input, index) => input.kind === "upstream_artifact" ? [{ stepId: input.stepId, artifactId: input.artifactId, sha256: operationParts[index]!.sha256 }] : []);
+    const implementationFingerprint = digestValue([...implementationParts].sort((a, b) => a.id.localeCompare(b.id))).sha256;
+    const operationFingerprint = digestValue([...operationParts].sort((a, b) => a.id.localeCompare(b.id))).sha256;
+    const dependencyFingerprint = digestValue({ stepId, executionSemantics: fingerprint.executionSemantics, implementationFingerprint, operationFingerprint }).sha256;
+    return { dependencyFingerprint, implementationFingerprint, operationFingerprint, upstream };
+  };
+
+  const readCompletionProof = async (stepId: string, artifactId: string): Promise<Record<string, unknown>> => {
+    const source = await fs.readFile(paths.getStepArtifactPath(stepId, artifactId), "utf8");
+    try {
+      const parsed: unknown = JSON.parse(source);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    } catch {
+      // Human decisions commonly use Markdown with YAML frontmatter.
+    }
+    return matter(source).data as Record<string, unknown>;
   };
 
   const logStepEvent: NodePipelineContext<TState, TServices>["logStepEvent"] = async (event) => {
@@ -151,8 +171,9 @@ export const createNodePipelineContext = <
       });
     },
     isStepReusable: async ({ stepId, artifacts, fingerprint }) => {
-      const manifest = await readArtifactManifest(paths.getStepOutputDir(stepId));
-      if (!manifest || manifest.stepId !== stepId || manifest.dependencyFingerprint !== await fingerprintFor(stepId, fingerprint)) return false;
+      const manifest = await readArtifactManifest(paths.getStepOutputDir(stepId)).catch(() => null);
+      const resolution = await resolveFingerprint(stepId, fingerprint);
+      if (!manifest || manifest.stepId !== stepId || manifest.executionSemantics !== fingerprint.executionSemantics || manifest.dependencyFingerprint !== resolution.dependencyFingerprint || manifest.implementationFingerprint !== resolution.implementationFingerprint || manifest.operationFingerprint !== resolution.operationFingerprint) return false;
       for (const artifactId of artifacts) {
         const spec = options.stepArtifactsById.get(stepId)?.[artifactId];
         const recorded = manifest.outputs.find((output) => output.artifactId === artifactId);
@@ -166,20 +187,38 @@ export const createNodePipelineContext = <
       return true;
     },
     recordStepCompletion: async ({ stepId, artifacts, fingerprint }) => {
+      const resolution = await resolveFingerprint(stepId, fingerprint);
       const outputs = await Promise.all(artifacts.map(async (artifactId) => {
+        const spec = options.stepArtifactsById.get(stepId)?.[artifactId];
+        if (!spec) throw new Error(`Unknown output artifact ${stepId}:${artifactId}`);
         const artifactPath = paths.getStepArtifactPath(stepId, artifactId);
         const stat = await fs.lstat(artifactPath);
         const digest = stat.isDirectory() ? await digestDirectory(artifactPath) : await digestFile(artifactPath);
-        return { artifactId, ...digest };
+        return { artifactId, kind: spec.kind === "dir" ? "directory" as const : "file" as const, ...digest };
       }));
+      let completion: import("./artifact-manifest.js").ArtifactManifest["completion"] = { status: "complete" };
+      if (fingerprint.executionSemantics === "human_gate") {
+        if (fingerprint.completion?.kind !== "human_decision") throw new Error(`Human gate ${stepId} must declare a decision artifact`);
+        const proof = await readCompletionProof(stepId, fingerprint.completion.artifactId);
+        if (proof.schema !== "pipeline-human-decision@1" || proof.reviewedFingerprint !== resolution.dependencyFingerprint || typeof proof.decision !== "string" || proof.decision.length === 0) throw new Error(`Human decision ${stepId} does not review the current dependency fingerprint`);
+        completion = { status: "human_accepted", decisionArtifactId: fingerprint.completion.artifactId, reviewedFingerprint: resolution.dependencyFingerprint };
+      } else if (fingerprint.executionSemantics === "external_effect") {
+        if (fingerprint.completion?.kind !== "external_receipt") throw new Error(`External effect ${stepId} must declare a receipt artifact`);
+        const proof = await readCompletionProof(stepId, fingerprint.completion.artifactId);
+        if (proof.schema !== "pipeline-external-effect-receipt@1" || proof.idempotencyKey !== resolution.operationFingerprint || typeof proof.externalId !== "string" || proof.externalId.length === 0) throw new Error(`External receipt ${stepId} has no matching idempotency key and external identifier`);
+        completion = { status: "external_effect_complete", receiptArtifactId: fingerprint.completion.artifactId, idempotencyKey: resolution.operationFingerprint };
+      }
       await writeArtifactManifest(paths.getStepOutputDir(stepId), {
         schema: "pipeline-artifact-manifest@1",
         pipelineId: options.outputDir,
         stepId,
-        dependencyFingerprint: await fingerprintFor(stepId, fingerprint),
+        executionSemantics: fingerprint.executionSemantics,
+        ...resolution,
         outputs,
+        completion,
       });
     },
+    resolveStepFingerprint: async ({ stepId, fingerprint }) => resolveFingerprint(stepId, fingerprint),
     readStepArtifactText: async (stepId: string, artifactId: string) => {
       return readArtifactText({
         ctx,

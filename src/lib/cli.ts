@@ -14,6 +14,7 @@
 */
 
 import dotenv from "dotenv";
+import { randomUUID } from "node:crypto";
 import {
   formatPipelineError,
   formatPipelinePaused,
@@ -46,7 +47,7 @@ const splitList = (value: string): string[] => {
  * - `--from <id>` — start from a specific step
  * - `--to <id>` — stop after a specific step
  * - `--only <id,id,...>` — run only specific steps
- * - `--force <id,id,...>` — force re-run of specific steps
+ * - `--refresh <id,id,...>` — record a nonce and refresh specific steps
  */
 export const parseRunOptions = (argv: string[]): PipelineRunOptions => {
   const options: PipelineRunOptions = {};
@@ -77,8 +78,8 @@ export const parseRunOptions = (argv: string[]): PipelineRunOptions => {
       continue;
     }
 
-    if (arg === "--force") {
-      options.force = splitList(readValue(argv, index, arg));
+    if (arg === "--refresh") {
+      options.refresh = { stepIds: splitList(readValue(argv, index, arg)), nonce: randomUUID() };
       index += 1;
       continue;
     }

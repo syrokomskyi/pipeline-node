@@ -12,7 +12,7 @@
 */
 
 import { PipelineStep } from "@syrokomskyi/pipeline-core/step";
-import type { PipelineStepContext, PipelineArtifacts } from "@syrokomskyi/pipeline-core";
+import type { PipelineStepContext, PipelineArtifacts, PipelineFingerprintContract } from "@syrokomskyi/pipeline-core";
 
 export type GogolBaseOptions<TContext extends PipelineStepContext> = {
   /**
@@ -70,6 +70,23 @@ export const createGogolBase = <TContext extends PipelineStepContext>(
         return getPromptFileNames(this);
       }
       return super.getPromptFileNames();
+    }
+
+    override get fingerprint(): PipelineFingerprintContract<TContext> {
+      const inherited = super.fingerprint;
+      return {
+        ...inherited,
+        implementationInputs: async (ctx) => {
+          const inputs = [...await inherited.implementationInputs(ctx)];
+          const promptRoot = (ctx as TContext & { promptsDir?: string }).promptsDir;
+          if (promptRoot) {
+            for (const fileName of this.getPromptFileNames()) {
+              inputs.push({ kind: "file", id: `prompt:${fileName}`, path: `${promptRoot}/${fileName}` });
+            }
+          }
+          return inputs;
+        },
+      };
     }
 
     override async shouldSkip(ctx: TContext): Promise<boolean> {

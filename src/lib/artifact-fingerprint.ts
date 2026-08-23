@@ -34,6 +34,10 @@ const canonicalValue = (value: unknown): string => {
   if (Array.isArray(value)) return `[${value.map(canonicalValue).join(",")}]`;
   if (typeof value === "object") {
     const record = value as Record<string, unknown>;
+    const secretKey = Object.keys(record).find((key) =>
+      /^(api[_-]?key|secret|password|access[_-]?token|refresh[_-]?token|credential)$/i.test(key),
+    );
+    if (secretKey) throw new Error(`Fingerprint values must not contain secret-bearing key: ${secretKey}`);
     return `{${Object.keys(record)
       .sort()
       .map((key) => `${JSON.stringify(key)}:${canonicalValue(record[key])}`)

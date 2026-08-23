@@ -6,6 +6,16 @@ Node.js-specific pipeline environment implementation.
 
 Includes filesystem operations, loading declarations from Markdown, path helpers, logging, prompt/template helpers, and shared CLI entry-point utilities.
 
+Artifact reuse is manifest-backed. `createNodePipelineContext` resolves declared
+implementation, operation, and upstream inputs; verifies output digests; and records
+human decisions or external receipts according to the step execution semantic.
+
+## Lifecycle tests
+
+Run `pnpm test` in this package. Example-based integration tests cover filesystem,
+manifest, tamper, human-decision, and receipt behavior. Property-based tests use
+`fast-check` for canonical digest invariants and dependency sensitivity.
+
 ## Exports
 
 | Subpath | Purpose |
@@ -35,7 +45,7 @@ import { runApp } from "./app/run-app.js";
 createMainEntry({ runApp });
 ```
 
-`createMainEntry` handles `dotenv.config()`, CLI argument parsing (`--dry-run`, `--from`, `--to`, `--only`, `--force`), `PipelinePauseError` (exit code 2), and general error formatting (exit code 1).
+`createMainEntry` handles `dotenv.config()`, CLI argument parsing (`--dry-run`, `--from`, `--to`, `--only`, `--refresh`), `PipelinePauseError` (exit code 2), and general error formatting (exit code 1). Refresh records a nonce in the selected step fingerprint; it never bypasses validation.
 
 `parseRunOptions` is also exported separately for apps that need it without the full entry-point wrapper (e.g. `observatory` which has a custom entry point).
 
