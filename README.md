@@ -9,6 +9,10 @@ Includes filesystem operations, loading declarations from Markdown, path helpers
 Artifact reuse is manifest-backed. `createNodePipelineContext` resolves declared
 implementation, operation, and upstream inputs; verifies output digests; and records
 human decisions or external receipts according to the step execution semantic.
+Declared filesystem inputs must resolve inside `workspaceRootDir` (the process
+working directory by default), and symlinks are rejected. Declaration-backed
+registries bind the selected factory and non-secret configuration into each step's
+operation fingerprint.
 
 ## Lifecycle tests
 

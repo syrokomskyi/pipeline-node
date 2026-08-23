@@ -44,6 +44,8 @@ export type NodePipelineContext<
 };
 
 export type CreateNodePipelineContextOptions<TState, TServices, TExtra extends object> = {
+  /** Absolute repository boundary for declared file and directory fingerprint inputs. */
+  workspaceRootDir?: string;
   inputDir: string;
   outputDir: string;
   promptsDir: string;

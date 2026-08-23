@@ -20,7 +20,9 @@ export type GogolRegistryFactoryOptions = {
 };
 
 export type CreateGogolRegistryOptions<
-  TStep extends PipelineStepLike<any> & { withExplanation(guide: PipelineStepGuideSeed): TStep },
+  TStep extends PipelineStepLike<any> & {
+    withExplanation(guide: PipelineStepGuideSeed, declaredOperationValue?: unknown): TStep;
+  },
 > = {
   loadGogolDeclaration: (options: { id: string; language?: string }) => PipelineStepDeclaration;
   toGogolGuideSeed: (declaration: PipelineStepDeclaration) => PipelineStepGuideSeed;
@@ -58,7 +60,9 @@ export type CreateGogolRegistryOptions<
  * ```
  */
 export const createGogolRegistry = <
-  TStep extends PipelineStepLike<any> & { withExplanation(guide: PipelineStepGuideSeed): TStep },
+  TStep extends PipelineStepLike<any> & {
+    withExplanation(guide: PipelineStepGuideSeed, declaredOperationValue?: unknown): TStep;
+  },
 >(
   options: CreateGogolRegistryOptions<TStep>,
 ) => {
@@ -74,6 +78,9 @@ export const createGogolRegistry = <
     }
 
     const step = factory({ id, config: declaration.config });
-    return step.withExplanation(options.toGogolGuideSeed(declaration));
+    return step.withExplanation(options.toGogolGuideSeed(declaration), {
+      factory: declaration.factory,
+      config: declaration.config,
+    });
   };
 };
