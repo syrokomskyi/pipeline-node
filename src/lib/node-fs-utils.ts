@@ -1,6 +1,6 @@
 /*
 <MODULE_CONTRACT>
-<purpose>File system utilities for node-based pipeline contexts.</purpose>
+<purpose>File system utilities for node-based pipeline contexts. for reliable use by its direct callers and maintainers.</purpose>
 <non-goals>
   <item>Does not implement pipeline context assembly or path resolution.</item>
 </non-goals>
