@@ -24,6 +24,8 @@ import {
   readArtifactJson,
   readArtifactText,
 } from "./artifact-io.js";
+import { digestDirectory, digestFile, digestValue } from "./artifact-fingerprint.js";
+import { readArtifactManifest, writeArtifactManifest } from "./artifact-manifest.js";
 import {
   ensureOutputDir,
   fileExists,
@@ -64,6 +66,27 @@ export const createNodePipelineContext = <
     ensureOutputDir,
     writeTextFile,
   });
+
+  const fingerprintFor = async (
+    stepId: string,
+    fingerprint: import("@syrokomskyi/pipeline-core").PipelineFingerprintContract<
+      import("@syrokomskyi/pipeline-core").PipelineStepContext<TState>
+    >,
+  ): Promise<string> => {
+    const inputs = [...(await fingerprint.implementationInputs(ctx)), ...(await fingerprint.operationInputs(ctx))];
+    const parts = await Promise.all(inputs.map(async (input) => {
+      if (input.kind === "file") return { id: input.id, kind: input.kind, ...await digestFile(input.path) };
+      if (input.kind === "directory") return { id: input.id, kind: input.kind, ...await digestDirectory(input.path) };
+      if (input.kind === "upstream_artifact") {
+        const artifactPath = paths.getStepArtifactPath(input.stepId, input.artifactId);
+        const stat = await fs.lstat(artifactPath);
+        const digest = stat.isDirectory() ? await digestDirectory(artifactPath) : await digestFile(artifactPath);
+        return { id: `${input.stepId}:${input.artifactId}`, kind: input.kind, ...digest };
+      }
+      return { id: input.id, kind: input.kind, ...digestValue(input.kind === "value" ? input.value : input.version) };
+    }));
+    return digestValue({ stepId, parts: parts.sort((left, right) => left.id.localeCompare(right.id)) }).sha256;
+  };
 
   const logStepEvent: NodePipelineContext<TState, TServices>["logStepEvent"] = async (event) => {
     const stepId = event.stepId ?? currentStepId;
@@ -123,6 +146,36 @@ export const createNodePipelineContext = <
         stepId,
         artifactId,
         artifactsByStepId: options.stepArtifactsById,
+      });
+    },
+    isStepReusable: async ({ stepId, artifacts, fingerprint }) => {
+      const manifest = await readArtifactManifest(paths.getStepOutputDir(stepId));
+      if (!manifest || manifest.stepId !== stepId || manifest.dependencyFingerprint !== await fingerprintFor(stepId, fingerprint)) return false;
+      for (const artifactId of artifacts) {
+        const spec = options.stepArtifactsById.get(stepId)?.[artifactId];
+        const recorded = manifest.outputs.find((output) => output.artifactId === artifactId);
+        if (!spec || !recorded) return false;
+        const artifactPath = paths.getStepArtifactPath(stepId, artifactId);
+        const stat = await fs.lstat(artifactPath).catch(() => null);
+        if (!stat) return false;
+        const digest = stat.isDirectory() ? await digestDirectory(artifactPath) : await digestFile(artifactPath);
+        if (digest.sha256 !== recorded.sha256 || digest.bytes !== recorded.bytes) return false;
+      }
+      return true;
+    },
+    recordStepCompletion: async ({ stepId, artifacts, fingerprint }) => {
+      const outputs = await Promise.all(artifacts.map(async (artifactId) => {
+        const artifactPath = paths.getStepArtifactPath(stepId, artifactId);
+        const stat = await fs.lstat(artifactPath);
+        const digest = stat.isDirectory() ? await digestDirectory(artifactPath) : await digestFile(artifactPath);
+        return { artifactId, ...digest };
+      }));
+      await writeArtifactManifest(paths.getStepOutputDir(stepId), {
+        schema: "pipeline-artifact-manifest@1",
+        pipelineId: options.outputDir,
+        stepId,
+        dependencyFingerprint: await fingerprintFor(stepId, fingerprint),
+        outputs,
       });
     },
     readStepArtifactText: async (stepId: string, artifactId: string) => {
