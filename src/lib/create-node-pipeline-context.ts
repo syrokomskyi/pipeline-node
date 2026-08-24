@@ -17,9 +17,7 @@
 */
 
 import fs from "node:fs/promises";
-import matter from "gray-matter";
 import { randomUUID } from "node:crypto";
-import path from "node:path";
 
 import {
   assertArtifactValid,
@@ -27,8 +25,6 @@ import {
   readArtifactJson,
   readArtifactText,
 } from "./artifact-io.js";
-import { digestDirectory, digestFile, digestValue } from "./artifact-fingerprint.js";
-import { readArtifactManifest, writeArtifactManifest } from "./artifact-manifest.js";
 import {
   ensureOutputDir,
   fileExists,
@@ -70,113 +66,6 @@ export const createNodePipelineContext = <
     writeTextFile,
   });
   const outputTransactions = new Map<string, string>();
-  const workspaceRootDir = path.resolve(options.workspaceRootDir ?? process.cwd());
-
-  const assertInsideWorkspace = (candidatePath: string): string => {
-    const absolutePath = path.resolve(candidatePath);
-    const relativePath = path.relative(workspaceRootDir, absolutePath);
-    if (
-      relativePath === "" ||
-      (!relativePath.startsWith(`..${path.sep}`) &&
-        relativePath !== ".." &&
-        !path.isAbsolute(relativePath))
-    ) {
-      return absolutePath;
-    }
-    throw new Error(`Fingerprint input escapes workspace root: ${candidatePath}`);
-  };
-
-  const resolveFingerprint = async <
-    TStepContext extends import("@syrokomskyi/pipeline-core").PipelineStepContext<TState>,
-  >(
-    stepId: string,
-    fingerprint: import("@syrokomskyi/pipeline-core").PipelineFingerprintContract<TStepContext>,
-  ): Promise<import("@syrokomskyi/pipeline-core").PipelineFingerprintResolution> => {
-    const fingerprintContext = ctx as unknown as TStepContext;
-    const implementationInputs = await fingerprint.implementationInputs(fingerprintContext);
-    const operationInputs = await fingerprint.operationInputs(fingerprintContext);
-    if (implementationInputs.length === 0)
-      throw new Error(`Step ${stepId} has no declared implementation inputs`);
-    if (operationInputs.length === 0)
-      throw new Error(`Step ${stepId} has no declared operation inputs`);
-    const resolveInputs = async (
-      inputs: readonly import("@syrokomskyi/pipeline-core").PipelineFingerprintInput[],
-    ) =>
-      Promise.all(
-        inputs.map(async (input) => {
-          if (input.kind === "file")
-            return {
-              id: input.id,
-              kind: input.kind,
-              ...(await digestFile(assertInsideWorkspace(input.path))),
-            };
-          if (input.kind === "directory")
-            return {
-              id: input.id,
-              kind: input.kind,
-              ...(await digestDirectory(assertInsideWorkspace(input.path))),
-            };
-          if (input.kind === "upstream_artifact") {
-            const artifactPath = paths.getStepArtifactPath(input.stepId, input.artifactId);
-            const stat = await fs.lstat(artifactPath);
-            const digest = stat.isDirectory()
-              ? await digestDirectory(artifactPath)
-              : await digestFile(artifactPath);
-            return { id: `${input.stepId}:${input.artifactId}`, kind: input.kind, ...digest };
-          }
-          return {
-            id: input.id,
-            kind: input.kind,
-            ...digestValue(input.kind === "value" ? input.value : input.version),
-          };
-        }),
-      );
-    const implementationParts = await resolveInputs(implementationInputs);
-    const operationParts = await resolveInputs(operationInputs);
-    const byId = [...implementationParts, ...operationParts].map((part) => part.id);
-    if (new Set(byId).size !== byId.length)
-      throw new Error(`Step ${stepId} has duplicate fingerprint input ids`);
-    const upstream = operationInputs.flatMap((input, index) =>
-      input.kind === "upstream_artifact"
-        ? [
-            {
-              stepId: input.stepId,
-              artifactId: input.artifactId,
-              sha256: operationParts[index]!.sha256,
-            },
-          ]
-        : [],
-    );
-    const implementationFingerprint = digestValue(
-      [...implementationParts].sort((a, b) => a.id.localeCompare(b.id)),
-    ).sha256;
-    const operationFingerprint = digestValue(
-      [...operationParts].sort((a, b) => a.id.localeCompare(b.id)),
-    ).sha256;
-    const dependencyFingerprint = digestValue({
-      stepId,
-      executionSemantics: fingerprint.executionSemantics,
-      implementationFingerprint,
-      operationFingerprint,
-    }).sha256;
-    return { dependencyFingerprint, implementationFingerprint, operationFingerprint, upstream };
-  };
-
-  const readCompletionProof = async (
-    stepId: string,
-    artifactId: string,
-  ): Promise<Record<string, unknown>> => {
-    const source = await fs.readFile(paths.getStepArtifactPath(stepId, artifactId), "utf8");
-    try {
-      const parsed: unknown = JSON.parse(source);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
-        return parsed as Record<string, unknown>;
-    } catch {
-      // Human decisions commonly use Markdown with YAML frontmatter.
-    }
-    return matter(source).data as Record<string, unknown>;
-  };
-
   const logStepEvent: NodePipelineContext<TState, TServices>["logStepEvent"] = async (event) => {
     const stepId = event.stepId ?? currentStepId;
     if (!stepId) {
@@ -237,102 +126,6 @@ export const createNodePipelineContext = <
         artifactsByStepId: options.stepArtifactsById,
       });
     },
-    isStepReusable: async ({ stepId, artifacts, fingerprint }) => {
-      const manifest = await readArtifactManifest(paths.getStepOutputDir(stepId)).catch(() => null);
-      const resolution = await resolveFingerprint(stepId, fingerprint);
-      if (
-        !manifest ||
-        manifest.stepId !== stepId ||
-        manifest.executionSemantics !== fingerprint.executionSemantics ||
-        manifest.dependencyFingerprint !== resolution.dependencyFingerprint ||
-        manifest.implementationFingerprint !== resolution.implementationFingerprint ||
-        manifest.operationFingerprint !== resolution.operationFingerprint
-      )
-        return false;
-      for (const artifactId of artifacts) {
-        const spec = options.stepArtifactsById.get(stepId)?.[artifactId];
-        const recorded = manifest.outputs.find((output) => output.artifactId === artifactId);
-        if (!spec || !recorded) return false;
-        const artifactPath = paths.getStepArtifactPath(stepId, artifactId);
-        const stat = await fs.lstat(artifactPath).catch(() => null);
-        if (!stat) return false;
-        const digest = stat.isDirectory()
-          ? await digestDirectory(artifactPath)
-          : await digestFile(artifactPath);
-        if (digest.sha256 !== recorded.sha256 || digest.bytes !== recorded.bytes) return false;
-      }
-      return true;
-    },
-    recordStepCompletion: async ({ stepId, artifacts, fingerprint }) => {
-      const resolution = await resolveFingerprint(stepId, fingerprint);
-      const outputs = await Promise.all(
-        artifacts.map(async (artifactId) => {
-          const spec = options.stepArtifactsById.get(stepId)?.[artifactId];
-          if (!spec) throw new Error(`Unknown output artifact ${stepId}:${artifactId}`);
-          const artifactPath = paths.getStepArtifactPath(stepId, artifactId);
-          const stat = await fs.lstat(artifactPath);
-          const digest = stat.isDirectory()
-            ? await digestDirectory(artifactPath)
-            : await digestFile(artifactPath);
-          return {
-            artifactId,
-            kind: spec.kind === "dir" ? ("directory" as const) : ("file" as const),
-            ...digest,
-          };
-        }),
-      );
-      let completion: import("./artifact-manifest.js").ArtifactManifest["completion"] = {
-        status: "complete",
-      };
-      if (fingerprint.executionSemantics === "human_gate") {
-        if (fingerprint.completion?.kind !== "human_decision")
-          throw new Error(`Human gate ${stepId} must declare a decision artifact`);
-        const proof = await readCompletionProof(stepId, fingerprint.completion.artifactId);
-        if (
-          proof.schema !== "pipeline-human-decision@1" ||
-          proof.reviewedFingerprint !== resolution.dependencyFingerprint ||
-          typeof proof.decision !== "string" ||
-          proof.decision.length === 0
-        )
-          throw new Error(
-            `Human decision ${stepId} does not review the current dependency fingerprint`,
-          );
-        completion = {
-          status: "human_accepted",
-          decisionArtifactId: fingerprint.completion.artifactId,
-          reviewedFingerprint: resolution.dependencyFingerprint,
-        };
-      } else if (fingerprint.executionSemantics === "external_effect") {
-        if (fingerprint.completion?.kind !== "external_receipt")
-          throw new Error(`External effect ${stepId} must declare a receipt artifact`);
-        const proof = await readCompletionProof(stepId, fingerprint.completion.artifactId);
-        if (
-          proof.schema !== "pipeline-external-effect-receipt@1" ||
-          proof.idempotencyKey !== resolution.operationFingerprint ||
-          typeof proof.externalId !== "string" ||
-          proof.externalId.length === 0
-        )
-          throw new Error(
-            `External receipt ${stepId} has no matching idempotency key and external identifier`,
-          );
-        completion = {
-          status: "external_effect_complete",
-          receiptArtifactId: fingerprint.completion.artifactId,
-          idempotencyKey: resolution.operationFingerprint,
-        };
-      }
-      await writeArtifactManifest(paths.getStepOutputDir(stepId), {
-        schema: "pipeline-artifact-manifest@1",
-        pipelineId: options.outputDir,
-        stepId,
-        executionSemantics: fingerprint.executionSemantics,
-        ...resolution,
-        outputs,
-        completion,
-      });
-    },
-    resolveStepFingerprint: async ({ stepId, fingerprint }) =>
-      resolveFingerprint(stepId, fingerprint),
     beginStepOutputTransaction: async (stepId: string) => {
       if (outputTransactions.has(stepId))
         throw new Error(`Step output transaction already active: ${stepId}`);
