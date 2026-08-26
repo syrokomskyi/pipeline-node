@@ -2,20 +2,20 @@ import { describe, it, expect } from "vitest";
 import { sanitizeJsonValue, stringifyJsonOutput } from "../lib/json-output.js";
 
 describe("sanitizeJsonValue", () => {
-  it("returns undefined for null", () => {
-    expect(sanitizeJsonValue(null)).toBeUndefined();
+  it("returns null for null", () => {
+    expect(sanitizeJsonValue(null)).toBeNull();
   });
 
-  it("returns undefined for false", () => {
-    expect(sanitizeJsonValue(false)).toBeUndefined();
+  it("returns false for false", () => {
+    expect(sanitizeJsonValue(false)).toBe(false);
   });
 
-  it("returns undefined for 0", () => {
-    expect(sanitizeJsonValue(0)).toBeUndefined();
+  it("returns 0 for 0", () => {
+    expect(sanitizeJsonValue(0)).toBe(0);
   });
 
-  it("returns undefined for empty string", () => {
-    expect(sanitizeJsonValue("")).toBeUndefined();
+  it("returns empty string for empty string", () => {
+    expect(sanitizeJsonValue("")).toBe("");
   });
 
   it("returns undefined for undefined", () => {
@@ -42,22 +42,33 @@ describe("sanitizeJsonValue", () => {
     expect(sanitizeJsonValue("hello")).toBe("hello");
   });
 
-  it("filters out falsy entries from arrays", () => {
-    expect(sanitizeJsonValue([1, 0, "a", "", null, false, 2])).toEqual([1, "a", 2]);
+  it("preserves falsy entries from arrays", () => {
+    expect(sanitizeJsonValue([1, 0, "a", "", null, false, 2])).toEqual([
+      1,
+      0,
+      "a",
+      "",
+      null,
+      false,
+      2,
+    ]);
   });
 
   it("returns undefined for empty array", () => {
     expect(sanitizeJsonValue([])).toBeUndefined();
   });
 
-  it("returns undefined for array of all falsy values", () => {
-    expect(sanitizeJsonValue([0, "", null, false])).toBeUndefined();
+  it("preserves array of all falsy values", () => {
+    expect(sanitizeJsonValue([0, "", null, false])).toEqual([0, "", null, false]);
   });
 
-  it("filters out falsy entries from objects", () => {
+  it("preserves falsy entries in objects", () => {
     expect(sanitizeJsonValue({ a: 1, b: 0, c: "x", d: "", e: null, f: 2 })).toEqual({
       a: 1,
+      b: 0,
       c: "x",
+      d: "",
+      e: null,
       f: 2,
     });
   });
@@ -66,18 +77,18 @@ describe("sanitizeJsonValue", () => {
     expect(sanitizeJsonValue({})).toBeUndefined();
   });
 
-  it("returns undefined for object with all falsy values", () => {
-    expect(sanitizeJsonValue({ a: 0, b: "", c: null })).toBeUndefined();
+  it("preserves object with all falsy values", () => {
+    expect(sanitizeJsonValue({ a: 0, b: "", c: null })).toEqual({ a: 0, b: "", c: null });
   });
 
   it("handles nested objects", () => {
     expect(sanitizeJsonValue({ outer: { inner: "val", empty: "" } })).toEqual({
-      outer: { inner: "val" },
+      outer: { inner: "val", empty: "" },
     });
   });
 
   it("handles nested arrays", () => {
-    expect(sanitizeJsonValue({ items: [1, 0, "a"] })).toEqual({ items: [1, "a"] });
+    expect(sanitizeJsonValue({ items: [1, 0, "a"] })).toEqual({ items: [1, 0, "a"] });
   });
 
   it("returns undefined for unsupported types (bigint, function)", () => {
@@ -94,8 +105,9 @@ describe("stringifyJsonOutput", () => {
     expect(result).toContain("\n  ");
   });
 
-  it("returns '{}' for all-falsy input", () => {
-    expect(stringifyJsonOutput({ a: 0, b: "" })).toBe("{}");
+  it("preserves falsy values in objects", () => {
+    const result = stringifyJsonOutput({ a: 0, b: "" });
+    expect(JSON.parse(result)).toEqual({ a: 0, b: "" });
   });
 
   it("returns '{}' for undefined", () => {

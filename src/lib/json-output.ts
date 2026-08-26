@@ -19,24 +19,24 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
 };
 
 const shouldOmitScalar = (value: unknown): boolean => {
-  if (value === null || value === false) {
+  if (value === undefined) {
     return true;
   }
 
   if (typeof value === "number") {
-    return value === 0 || !Number.isFinite(value);
-  }
-
-  if (typeof value === "string") {
-    return value.length === 0;
+    return !Number.isFinite(value);
   }
 
   return false;
 };
 
 export const sanitizeJsonValue = (value: unknown): JsonValue | undefined => {
-  if (shouldOmitScalar(value) || value === undefined) {
+  if (value === undefined || shouldOmitScalar(value)) {
     return undefined;
+  }
+
+  if (value === null) {
+    return null;
   }
 
   if (Array.isArray(value)) {
