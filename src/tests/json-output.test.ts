@@ -54,8 +54,8 @@ describe("sanitizeJsonValue", () => {
     ]);
   });
 
-  it("returns undefined for empty array", () => {
-    expect(sanitizeJsonValue([])).toBeUndefined();
+  it("returns empty array for empty array", () => {
+    expect(sanitizeJsonValue([])).toEqual([]);
   });
 
   it("preserves array of all falsy values", () => {
@@ -73,8 +73,8 @@ describe("sanitizeJsonValue", () => {
     });
   });
 
-  it("returns undefined for empty object", () => {
-    expect(sanitizeJsonValue({})).toBeUndefined();
+  it("returns empty object for empty object", () => {
+    expect(sanitizeJsonValue({})).toEqual({});
   });
 
   it("preserves object with all falsy values", () => {

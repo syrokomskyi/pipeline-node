@@ -45,7 +45,7 @@ export const sanitizeJsonValue = (value: unknown): JsonValue | undefined => {
       return sanitized === undefined ? [] : [sanitized];
     });
 
-    return next.length > 0 ? next : undefined;
+    return next;
   }
 
   if (isPlainObject(value)) {
@@ -54,7 +54,7 @@ export const sanitizeJsonValue = (value: unknown): JsonValue | undefined => {
       return sanitized === undefined ? [] : [[key, sanitized] as const];
     });
 
-    return nextEntries.length > 0 ? Object.fromEntries(nextEntries) : undefined;
+    return Object.fromEntries(nextEntries);
   }
 
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
