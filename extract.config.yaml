@@ -12,7 +12,9 @@ stripScopes:
   - "@syrokomskyi/"
   - "@warpgogol/"
   - "@wgogol/"
-preservePackages: []
+preservePackages:
+  - "@warpgogol/pipeline-core"
+  - "@warpgogol/pipeline-ai"
 packageManager: "pnpm"
 ignoreDirs:
   - .output
