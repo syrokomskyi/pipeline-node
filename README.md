@@ -1,58 +1,115 @@
-# @syrokomskyi/pipeline-node
+# @warpgogol/pipeline-node
 
-Node.js-specific pipeline environment implementation.
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![npm](https://img.shields.io/npm/v/@warpgogol/pipeline-node?logo=npm&logoColor=white)](https://www.npmjs.com/package/@warpgogol/pipeline-node)
 
-## Usage
+Node.js runtime for the pipeline framework — filesystem I/O, declaration loading, prompt/template helpers, CLI entry factory, and artifact management.
 
-Includes filesystem operations, loading declarations from Markdown, path helpers, logging, prompt/template helpers, and shared CLI entry-point utilities.
+> Engineered at [Warpgogol](https://warpgogol.com) · Released as open source.
 
-Artifact reuse is manifest-backed. `createNodePipelineContext` resolves declared
-implementation, operation, and upstream inputs; verifies output digests; and records
-human decisions or external receipts according to the step execution semantic.
-Declared filesystem inputs must resolve inside `workspaceRootDir` (the process
-working directory by default), and symlinks are rejected. Declaration-backed
-registries bind the selected factory and non-secret configuration into each step's
-operation fingerprint.
+---
 
-## Lifecycle tests
+## Features
 
-Run `pnpm test` in this package. Example-based integration tests cover filesystem,
-manifest, tamper, human-decision, and receipt behavior. Property-based tests use
-`fast-check` for canonical digest invariants and dependency sensitivity.
+- **Node.js pipeline context** — `createNodePipelineContext()` with manifest-backed artifact reuse
+- **Declaration loading** — load phases and gogols from Markdown declaration files
+- **Artifact I/O** — read/write artifacts with fingerprinting and validation
+- **Frontmatter parsing** — `gray-matter`-based frontmatter extraction
+- **Prompt files** — read and validate prompt templates from disk
+- **Handlebars templates** — render template-driven artifacts
+- **CLI entry factory** — `createMainEntry()` with dotenv, arg parsing, and error handling
+- **Environment helpers** — `getRequiredEnv()` with clear error messages
+- **LLM artifact helpers** — persist AI call logs, responses, and usage metadata
+- **Webhook event bridge** — `createWebhookEventBridge()` for pipeline event forwarding
+
+## Install
+
+```bash
+npm install @warpgogol/pipeline-core @warpgogol/pipeline-ai @warpgogol/pipeline-node
+
+# Optional peer deps (only if you use browser/image features)
+npm install playwright sharp
+```
+
+### Peer dependencies
+
+| Package      | Required for                | Optional |
+| ------------ | --------------------------- | -------- |
+| `playwright` | Browser automation features | Yes      |
+| `sharp`      | Image processing features   | Yes      |
+
+## Quick start
+
+```ts
+import { createMainEntry } from "@warpgogol/pipeline-node/cli";
+import { createNodePipelineContext } from "@warpgogol/pipeline-node/context";
+import { definePipeline } from "@warpgogol/pipeline-core";
+
+// 1. Create a CLI entry point
+createMainEntry({
+  runApp: async (options) => {
+    const ctx = await createNodePipelineContext({
+      workspaceRootDir: process.cwd(),
+      outputDir: ".output",
+      // ... your context inputs
+    });
+
+    const pipeline = definePipeline({
+      id: "my-pipeline",
+      phases: [/* ... */],
+    });
+
+    await runPipelineEngine(pipeline, ctx);
+  },
+});
+```
 
 ## Exports
 
-| Subpath | Purpose |
+| Export | Description |
 | --- | --- |
-| `.` | General Node.js pipeline utilities (artifact I/O, env, frontmatter, declarations, types, prompts, templates, fetch helpers, LLM artifacts) |
-| `./context` | `createNodePipelineContext` and `ensureOutputDir` |
-| `./engine` | `createPipelineEngine` factory for app-local `runPipelineEngine` |
-| `./declarations` | `createGogolRegistry`, `createPhaseRegistry`, declaration loading helpers |
-| `./cli` | `parseRunOptions` (CLI argument parser) and `createMainEntry` (main entry-point factory with dotenv + error handling) |
-| `./env` | `getRequiredEnv` |
-| `./frontmatter` | Frontmatter parsing utilities |
-| `./documentation` | Pipeline documentation helpers |
-| `./types` | Node-specific pipeline types |
-| `./prompts` | Prompt file reading and validation |
-| `./input-validation` | Input validation helpers |
-| `./templates` | Handlebars template rendering |
-| `./llm-artifacts` | LLM artifact helpers |
+| `createNodePipelineContext(opts)` | Create a Node.js pipeline context with artifact I/O |
+| `createMainEntry(opts)` | CLI entry-point factory with dotenv + error handling |
+| `parseRunOptions(args)` | CLI argument parser (`--dry-run`, `--from`, `--to`, `--only`, `--refresh`) |
+| `createGogolRegistry()` | Registry for gogol factories |
+| `createPhaseRegistry()` | Registry for phase definitions |
+| `loadDeclarations(dir)` | Load pipeline declarations from Markdown files |
+| `getRequiredEnv(name)` | Read required env var with clear error |
+| `readPromptFiles(dir)` | Read and validate prompt files |
+| `createHandlebarsTemplateRenderer(opts)` | Render Handlebars templates |
+| `writeGogolGuideArtifacts(...)` | Write guide artifacts for a gogol |
+| `appendJsonLine(path, entry)` | Append a JSON line to a log file |
+| `createWebhookEventBridge(url)` | Forward pipeline events to a webhook |
 
-### `./cli` — shared CLI and entry-point boilerplate
+### Subpath exports
 
-Eliminates duplicated `main.ts` and `parse-run-options.ts` across pipeline apps.
-
-```typescript
-import { createMainEntry } from "@syrokomskyi/pipeline-node/cli";
-import { runApp } from "./app/run-app.js";
-
-createMainEntry({ runApp });
-```
-
-`createMainEntry` handles `dotenv.config()`, CLI argument parsing (`--dry-run`, `--from`, `--to`, `--only`, `--refresh`), `PipelinePauseError` (exit code 2), and general error formatting (exit code 1). Refresh records a nonce in the selected step fingerprint; it never bypasses validation.
-
-`parseRunOptions` is also exported separately for apps that need it without the full entry-point wrapper (e.g. `observatory` which has a custom entry point).
+| Path                                        | Description                        |
+| ------------------------------------------- | ---------------------------------- |
+| `@warpgogol/pipeline-node/context`          | Context creation                   |
+| `@warpgogol/pipeline-node/engine`           | Pipeline engine factory            |
+| `@warpgogol/pipeline-node/declarations`     | Declaration loading and registries |
+| `@warpgogol/pipeline-node/cli`              | CLI entry-point and arg parsing    |
+| `@warpgogol/pipeline-node/env`              | Environment helpers                |
+| `@warpgogol/pipeline-node/frontmatter`      | Frontmatter parsing                |
+| `@warpgogol/pipeline-node/documentation`    | Pipeline documentation helpers     |
+| `@warpgogol/pipeline-node/types`            | Node-specific pipeline types       |
+| `@warpgogol/pipeline-node/prompts`          | Prompt file helpers                |
+| `@warpgogol/pipeline-node/input-validation` | Input validation helpers           |
+| `@warpgogol/pipeline-node/templates`        | Handlebars template rendering      |
+| `@warpgogol/pipeline-node/llm-artifacts`    | LLM artifact helpers               |
+| `@warpgogol/pipeline-node/paths`            | App path helpers                   |
 
 ## Changelog
 
 [CHANGELOG.md](CHANGELOG.md)
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE)
+
+## Open Engineering
+
+This package originated from production engineering work at [Warpgogol](https://warpgogol.com), an engineering studio in Germany.
+
+We publish reusable parts of our infrastructure when they can be useful beyond our own projects. It is published independently of any Warpgogol commercial service. Using this package does not create any dependency on Warpgogol.
+
+Built for real systems. Shared openly.
