@@ -1,6 +1,6 @@
 {
   "name": "@warpgogol/pipeline-node",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -88,7 +88,10 @@
       "default": "./dist/lib/app-paths.js"
     }
   },
-  "files": ["dist", "!**/*.tsbuildinfo"],
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo"
+  ],
   "dependencies": {
     "@warpgogol/pipeline-ai": "workspace:*",
     "@warpgogol/pipeline-core": "workspace:*",
