@@ -13,7 +13,7 @@
 import path from "node:path";
 import fs from "node:fs/promises";
 
-import { PipelinePauseError } from "@syrokomskyi/pipeline-core";
+import { PipelinePauseError } from "@warpgogol/pipeline-core";
 import type { NodePipelineContext } from "./node-pipeline-types.js";
 
 export type RequireInputFilesOptions<TState = unknown, TServices = unknown> = {

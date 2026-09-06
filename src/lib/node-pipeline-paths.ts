@@ -12,7 +12,7 @@
 
 import path from "node:path";
 
-import type { PipelineArtifacts, PipelineStepContext } from "@syrokomskyi/pipeline-core";
+import type { PipelineArtifacts, PipelineStepContext } from "@warpgogol/pipeline-core";
 
 export const createNodePipelinePaths = <TContext extends PipelineStepContext>(options: {
   outputDir: string;

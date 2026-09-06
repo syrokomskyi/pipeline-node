@@ -14,7 +14,7 @@
 
 import path from "node:path";
 
-import { PipelinePauseError } from "@syrokomskyi/pipeline-core";
+import { PipelinePauseError } from "@warpgogol/pipeline-core";
 
 import { readTextFile } from "./create-node-pipeline-context.js";
 

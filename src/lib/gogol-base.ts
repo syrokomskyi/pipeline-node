@@ -11,8 +11,8 @@
 </CHANGE_SUMMARY>
 */
 
-import { PipelineStep } from "@syrokomskyi/pipeline-core/step";
-import type { PipelineStepContext, PipelineArtifacts, PipelineFingerprintContract } from "@syrokomskyi/pipeline-core";
+import { PipelineStep } from "@warpgogol/pipeline-core/step";
+import type { PipelineStepContext, PipelineArtifacts, PipelineFingerprintContract } from "@warpgogol/pipeline-core";
 
 export type GogolBaseOptions<TContext extends PipelineStepContext> = {
   /**

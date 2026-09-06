@@ -14,7 +14,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import sharp from "sharp";
-import type { PipelineAiLogOptions, TokenUsage } from "@syrokomskyi/pipeline-core";
+import type { PipelineAiLogOptions, TokenUsage } from "@warpgogol/pipeline-core";
 
 const formatMarkdownValue = (value: unknown): string => {
   if (typeof value === "string") {

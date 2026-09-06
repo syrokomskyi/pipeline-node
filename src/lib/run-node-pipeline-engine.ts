@@ -22,7 +22,7 @@ import {
   type PipelineRunOptions,
   type PipelineStepContext,
   type PipelineStepLike,
-} from "@syrokomskyi/pipeline-core";
+} from "@warpgogol/pipeline-core";
 
 export type CreateNodePipelineAppContextOptions<
   TState,

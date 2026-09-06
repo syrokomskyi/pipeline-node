@@ -11,7 +11,7 @@
 </CHANGE_SUMMARY>
 */
 
-import type { PipelinePhase, PipelineStepLike } from "@syrokomskyi/pipeline-core";
+import type { PipelinePhase, PipelineStepLike } from "@warpgogol/pipeline-core";
 
 export type CreatePhaseRegistryOptions<
   TBuildContext,
@@ -39,7 +39,7 @@ export type CreatePhaseRegistryOptions<
  *
  * Usage in app phase-registry.ts:
  * ```ts
- * import { createPhaseRegistry } from "@syrokomskyi/pipeline-node/declarations";
+ * import { createPhaseRegistry } from "@warpgogol/pipeline-node/declarations";
  * import { AppPhase } from "./phases/AppPhase";
  * import { createGogolById } from "./gogol-registry";
  * import type { PipelineBuildContext, Gogol } from "./types";

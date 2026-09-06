@@ -7,9 +7,9 @@
     "emitDeclarationOnly": false,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@syrokomskyi/pipeline-core": ["../pipeline-core/src/index.ts"],
-      "@syrokomskyi/pipeline-ai": ["../pipeline-ai/src/index.ts"],
-      "@syrokomskyi/pipeline-ai/openai": ["../pipeline-ai/src/lib/openai.ts"]
+      "@warpgogol/pipeline-core": ["../pipeline-core/src/index.ts"],
+      "@warpgogol/pipeline-ai": ["../pipeline-ai/src/index.ts"],
+      "@warpgogol/pipeline-ai/openai": ["../pipeline-ai/src/lib/openai.ts"]
     },
     "types": ["node"]
   },

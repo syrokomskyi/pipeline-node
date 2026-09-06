@@ -4,7 +4,7 @@ import {
   assertPromptTextReady,
   createPromptFileReader,
 } from "../lib/prompt-files.js";
-import { PipelinePauseError } from "@syrokomskyi/pipeline-core";
+import { PipelinePauseError } from "@warpgogol/pipeline-core";
 
 describe("appendOutputLanguageInstruction", () => {
   it("appends language instructions to prompt text", () => {

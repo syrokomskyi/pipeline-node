@@ -62,7 +62,7 @@ export type AppDeclarationModuleOptions = {
  *
  * Usage in app declaration.ts:
  * ```ts
- * import { createAppDeclarationModule } from "@syrokomskyi/pipeline-node/declarations";
+ * import { createAppDeclarationModule } from "@warpgogol/pipeline-node/declarations";
  *
  * const decl = createAppDeclarationModule({ moduleUrl: import.meta.url });
  *

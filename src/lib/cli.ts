@@ -20,7 +20,7 @@ import {
   PipelinePauseError,
   type PipelineEventCallback,
   type PipelineRunOptions,
-} from "@syrokomskyi/pipeline-core";
+} from "@warpgogol/pipeline-core";
 import { createWebhookEventBridge } from "./webhook-event-bridge.js";
 
 const readValue = (args: string[], index: number, flag: string): string => {
@@ -89,7 +89,7 @@ export const parseRunOptions = (argv: string[]): PipelineRunOptions => {
  *
  * Usage in app main.ts:
  * ```ts
- * import { createMainEntry } from "@syrokomskyi/pipeline-node/cli";
+ * import { createMainEntry } from "@warpgogol/pipeline-node/cli";
  * import { runApp } from "./app/run-app.js";
  *
  * createMainEntry({ runApp });

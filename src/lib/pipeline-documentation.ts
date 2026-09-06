@@ -12,8 +12,8 @@
 </CHANGE_SUMMARY>
 */
 
-import type { PipelineDefinition, PipelineStepLike } from "@syrokomskyi/pipeline-core";
-import { renderFullPipelineDocumentationMarkdown } from "@syrokomskyi/pipeline-core";
+import type { PipelineDefinition, PipelineStepLike } from "@warpgogol/pipeline-core";
+import { renderFullPipelineDocumentationMarkdown } from "@warpgogol/pipeline-core";
 
 import { writeTextFile } from "./create-node-pipeline-context.js";
 

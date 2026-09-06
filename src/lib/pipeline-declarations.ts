@@ -17,7 +17,7 @@ import type {
   PipelineStepAiModelUsage,
   PipelineStepDecisionType,
   PipelineStepGuideSeed,
-} from "@syrokomskyi/pipeline-core";
+} from "@warpgogol/pipeline-core";
 import {
   createCachedFrontmatterFileReader,
   expectFrontmatterString,

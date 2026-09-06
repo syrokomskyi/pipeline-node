@@ -11,7 +11,7 @@
 </CHANGE_SUMMARY>
 */
 
-import type { PipelineEvent, PipelineEventCallback } from "@syrokomskyi/pipeline-core";
+import type { PipelineEvent, PipelineEventCallback } from "@warpgogol/pipeline-core";
 
 type WebhookEventPayload = {
   runId: string;

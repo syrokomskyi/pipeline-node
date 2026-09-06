@@ -18,7 +18,7 @@ import type {
   PipelineRunOptions,
   PipelineStepContext,
   PipelineStepLike,
-} from "@syrokomskyi/pipeline-core";
+} from "@warpgogol/pipeline-core";
 import { runNodePipelineEngine } from "./run-node-pipeline-engine.js";
 import type { CreateNodePipelineAppContextOptions } from "./run-node-pipeline-engine.js";
 
@@ -43,7 +43,7 @@ export type CreatePipelineEngineOptions<
  *
  * Usage in app engine.ts:
  * ```ts
- * import { createPipelineEngine } from "@syrokomskyi/pipeline-node/engine";
+ * import { createPipelineEngine } from "@warpgogol/pipeline-node/engine";
  * import { createPipelineContext } from "./context/create-context";
  * import type { Gogol } from "./Gogol";
  * import type { PipelineContext, PipelineState } from "./types";

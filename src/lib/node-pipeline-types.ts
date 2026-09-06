@@ -18,7 +18,7 @@ import type {
   PipelineRunNamespace,
   PipelineStepContext,
   TokenUsage,
-} from "@syrokomskyi/pipeline-core";
+} from "@warpgogol/pipeline-core";
 
 export type NodePipelineContext<
   TState = unknown,

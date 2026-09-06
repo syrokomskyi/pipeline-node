@@ -16,7 +16,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import matter from "gray-matter";
-import type { PipelineStepExecutionSemantics } from "@syrokomskyi/pipeline-core";
+import type { PipelineStepExecutionSemantics } from "@warpgogol/pipeline-core";
 
 export const artifactManifestFileName = "artifact-manifest.yaml";
 export type ArtifactManifest = {

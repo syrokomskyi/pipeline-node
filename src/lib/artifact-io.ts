@@ -14,8 +14,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { ArtifactValidationError } from "@syrokomskyi/pipeline-core";
-import type { PipelineArtifacts } from "@syrokomskyi/pipeline-core";
+import { ArtifactValidationError } from "@warpgogol/pipeline-core";
+import type { PipelineArtifacts } from "@warpgogol/pipeline-core";
 import type { NodePipelineContext } from "./node-pipeline-types.js";
 
 const defaultTextMinLength = 3;

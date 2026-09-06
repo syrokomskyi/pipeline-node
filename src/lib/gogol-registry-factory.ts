@@ -11,7 +11,7 @@
 </CHANGE_SUMMARY>
 */
 
-import type { PipelineStepGuideSeed, PipelineStepLike } from "@syrokomskyi/pipeline-core";
+import type { PipelineStepGuideSeed, PipelineStepLike } from "@warpgogol/pipeline-core";
 import type { PipelineStepDeclaration } from "./pipeline-declarations.js";
 
 export type GogolRegistryFactoryOptions = {
@@ -37,7 +37,7 @@ export type CreateGogolRegistryOptions<
  *
  * Usage in app gogol-registry.ts:
  * ```ts
- * import { createGogolRegistry } from "@syrokomskyi/pipeline-node/declarations";
+ * import { createGogolRegistry } from "@warpgogol/pipeline-node/declarations";
  * import { loadGogolDeclaration, toGogolGuideSeed } from "./declaration";
  * import type { Gogol } from "./Gogol";
  *
