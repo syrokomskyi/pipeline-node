@@ -1,0 +1,3 @@
+minimumReleaseAgeExclude:
+  - '@warpgogol/pipeline-ai@0.1.6'
+  - '@warpgogol/pipeline-core@0.1.8'

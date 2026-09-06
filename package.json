@@ -1,6 +1,6 @@
 {
   "name": "@warpgogol/pipeline-node",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "private": false,
   "type": "module",
   "repository": {
@@ -92,10 +92,13 @@
       "default": "./dist/lib/app-paths.js"
     }
   },
-  "files": ["dist", "!**/*.tsbuildinfo"],
+  "files": [
+    "dist",
+    "!**/*.tsbuildinfo"
+  ],
   "dependencies": {
-    "@warpgogol/pipeline-ai": "workspace:*",
-    "@warpgogol/pipeline-core": "workspace:*",
+    "@warpgogol/pipeline-ai": "*",
+    "@warpgogol/pipeline-core": "*",
     "dotenv": "^17.4.2",
     "gray-matter": "^4.0.3",
     "handlebars": "^4.7.9",
@@ -116,11 +119,11 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.0",
-    "@warpgogol/changelog-live": "workspace:*",
     "eslint": "~10.9.0",
     "fast-check": "4.9.0",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.67.0",
     "vitest": "4.1.10"
-  }
+  },
+  "packageManager": "pnpm@11.20.0"
 }
